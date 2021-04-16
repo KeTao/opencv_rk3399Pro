@@ -7,32 +7,66 @@
 #include <opencv2/videoio.hpp>
 #include <fstream>
 
+#include "camera_test.h"
 using namespace std;
 using namespace cv;
-
-const int width = 640;
-const int height = 480;
-const int framesize = width * height * 2;   //一副图所含的像素个数
-#define FrameCount 1
-
+extern VideoBuffer* buffers;
+extern int fd_camera; 
+const int framesize = IMAGEWIDTH * IMAGEHEIGHT * 2;   //一副图所含的像素个数
 int main()
 {
-	FILE* fileIn = fopen("img_yuv.yuv", "rb+");
-	unsigned char* pYuvBuf = new unsigned char[framesize]; //一帧数据大小
-	fread(pYuvBuf, framesize*sizeof(unsigned char), 1, fileIn);
-	printf("length = %ld\n",strlen((char*)pYuvBuf));
-	fclose(fileIn);
+	init_v4l2();
+	queue_v4l2();
 
-	cv::Mat yuvImg;
-	cv::Mat rgbImg(height, width, CV_8UC3);
-	yuvImg.create(height, width, CV_8UC2);
-	memcpy(yuvImg.data, pYuvBuf, framesize);
-	cv::cvtColor(yuvImg, rgbImg, CV_YUV2BGR_YUYV);
-	
-	imshow("aaa",rgbImg);
-	waitKey(0);
+	while(1) {
+		unsigned char* pYuvBuf = new unsigned char[framesize]; //一帧数据大小	
+		FILE* file_yuv = fopen(YUY2IMG,"wb");
+		if(!file_yuv) {
+			printf("open YUY2IMG failed\n");
+			exit(-1);
+		}
+		else {
+			printf("create yuyv file success!\n");
+		}
 
-
+		int ret = cap_v4l2(file_yuv);
+		if(ret == FALSE) {
+			printf("cap image failed\n");
+			return 0;
+		}
+		fclose(file_yuv);
 		
+		FILE* fileIn = fopen(YUY2IMG, "rb+");
+		if(!fileIn) {
+			printf("open YUY2IMG failed\n");
+			exit(-1);
+		}
+		else {
+			printf("open yuyv file success!\n");
+		}
+		fread(pYuvBuf, framesize*sizeof(unsigned char), 1, fileIn);
+		fclose(fileIn);
+		
+		printf("length = %ld\n",strlen((char*)pYuvBuf));
+		cv::Mat yuvImg;
+		cv::Mat rgbImg(IMAGEHEIGHT, IMAGEWIDTH, CV_8UC3);
+		yuvImg.create(IMAGEHEIGHT, IMAGEWIDTH, CV_8UC2);
+		memcpy(yuvImg.data, pYuvBuf, framesize);
+		cv::cvtColor(yuvImg, rgbImg, CV_YUV2BGR_YUYV);
+		Mat imgResize;
+		resize(rgbImg,imgResize,Size(),0.5,0.5);
+		imshow("rgbImg",rgbImg);
+		imshow("imgResize",imgResize);
+
+		vector<int> compression_params;
+		compression_params.push_back(CV_IMWRITE_JPEG_QUALITY);
+		compression_params.push_back(100);
+
+		imwrite("1.jpg",imgResize,compression_params);
+		
+		free(pYuvBuf);	
+		printf("-----------------------------------------------------------------------------------------------------------------\n");
+		waitKey(10);
+	}
 	return 0;
 }
