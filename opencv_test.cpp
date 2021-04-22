@@ -7,16 +7,27 @@
 #include <opencv2/videoio.hpp>
 #include <fstream>
 
-#include "camera_test.h"
+#include "v4l2_camera.h"
 using namespace std;
 using namespace cv;
 extern VideoBuffer* buffers;
-extern int fd_camera; 
+extern int vidDevFd; 
 const int framesize = IMAGEWIDTH * IMAGEHEIGHT * 2;   //一副图所含的像素个数
 int main()
 {
-	init_v4l2();
-	queue_v4l2();
+	int ret= v4l2_init_camera();
+	if(ret == FALSE) {
+		printf("init vdl2 failed\n");
+		return 0;
+	}
+
+
+	ret = v4l2_camera_reqbuff();
+	if(ret == FALSE) {
+		printf("request buffer error\n");
+		return 0;
+	}
+
 
 	while(1) {
 		unsigned char* pYuvBuf = new unsigned char[framesize]; //一帧数据大小	
@@ -29,7 +40,7 @@ int main()
 			printf("create yuyv file success!\n");
 		}
 
-		int ret = cap_v4l2(file_yuv);
+		int ret = v4l2_start_camera(file_yuv);
 		if(ret == FALSE) {
 			printf("cap image failed\n");
 			return 0;
