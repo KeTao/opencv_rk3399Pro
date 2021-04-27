@@ -1,5 +1,6 @@
 #ifndef __AT_SERIAL_TEST_H
 #define __AT_SERIAL_TEST_H
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -7,16 +8,30 @@ extern "C" {
 }
 #endif
 
+
 typedef struct at_qicsgp{
+	unsigned int  context_id;
 	unsigned int  context_type;
 	unsigned char APN[20];
 }at_qicsgp_t;
 
+#define SERVER_IP   "124.79.129.208"
+#define SERVER_PORT 8001 
+/* Operator info */
+#define OPERATOR_CM "CHINA MOBILE" //中国移动
+#define OPERATOR_CT "CHN_CT" //中国电信
+#define OPERATOR_UNICOM "CHN_UNICOM" //中国联通
 
 /* AT COMMAND ERROR */
 #define AT_SEND_ERROR     -10
 #define AT_RECV_ERROR     -11
+#define AT_SET_COMMAND_FAILED  -12
+#define AT_SET_COMMAND_SUCCESS 12
 
+#define AT_COMMAND_RESPOND_OK "\r\nOK\r\n"
+#define AT_COMMAND_RESPOND_CREG "\r\n+CREG: 0,1\r\n\r\nOK\r\n"
+#define AT_COMMAND_RESPOND_CGREG "\r\n+CGREG: 0,1\r\n\r\nOK\r\n"
+#define AT_COMMAND_URC_RECV  "\r\n+QIURC: \"recv\",0\r\n"
 /* serial error code */
 #define SERIAL_ERROR_OPEN        -1
 #define SERIAL_ERROR_READ        -2
@@ -80,4 +95,14 @@ typedef struct at_qicsgp{
 #define BAUD_RATE_30000000	30000000
 #define BAUD_RATE_35000000	35000000
 #define BAUD_RATE_40000000	40000000
+
+
+int serial_init(const char* device_name,int baut_rate,short data_bits,char parity,short stop_bits,short flow_control);
+int AT_set_command(int fd,char* cmd,size_t cmd_len,char* res,size_t res_len,int timeout_ms,const char* res_expect);
+
+
+
+
+
+
 #endif
