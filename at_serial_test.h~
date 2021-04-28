@@ -7,17 +7,6 @@ extern "C" {
 }
 #endif
 
-#define MAX_CAMERA_NUM  20
-
-typedef struct at_qiopen{
-	unsigned short  connectID;
-	unsigned char	service_type[30];
-	unsigned char	server_ip[40];
-	unsigned short  server_port;
-	unsigned short  local_port;
-	unsigned short  access_mode;
-	short			connect_status;
-}at_qiopen_t;
 
 typedef struct at_qicsgp{
 	unsigned int  context_id;
@@ -26,20 +15,6 @@ typedef struct at_qicsgp{
 }at_qicsgp_t;
 
 
-
-typedef struct camera_info{
-	char device_name[20];//设备名称 如video0 video1
-	char camera_name[20];//自己取的别名 如摄像头一 摄像头二
-}camera_info_t;
-
-struct clnt_info{
-	unsigned short fd_ec20;  //file descriptor
-	char cops_info[30]; //operator
-	camera_info_t camera_list[MAX_CAMERA_NUM];// camera device name list
-	 
-	static at_qicsgp_t csgp_info;
-
-};
 /* Operator info */
 #define OPERATOR_CM "CHINA MOBILE" //中国移动
 #define OPERATOR_CT "CHN_CT" //中国电信
@@ -47,25 +22,11 @@ struct clnt_info{
 
 /* AT COMMAND ERROR */
 #define AT_SEND_ERROR     -10
-#define AT_LENGTH_ERROR   -13
 #define AT_RECV_ERROR     -11
 #define AT_SET_COMMAND_FAILED  -12
 #define AT_SET_COMMAND_SUCCESS 12
 
-#define AT_NO_RESPOND				-99
-#define AT_NO_SIM					-98
-#define AT_SERIAL_INIT_ERROR		-97 
-#define AT_COMMAND_ERROR_NO_MODULE  -96
-#define AT_NO_NETWORK				-95
-#define AT_SET_CONTEXT_ERROR		-94
-#define AT_ACTIVE_CONTEXT_ERROR		-93
-#define AT_QIOPEN_ERROR				-92
-#define AT_QICLOSE_ERROR			-91
-
-#define AT_COMMAND_RESPOND_SIM "\r\n+CPIN: READY\r\n\r\nOK\r\n"
 #define AT_COMMAND_RESPOND_OK "\r\nOK\r\n"
-#define AT_COMMAND_RESPOND_ATE0 "ATE0\r\n\r\nOK\r\n"
-#define AT_COMMAND_RESPOND_ERROR "\r\nERROR\r\n"
 #define AT_COMMAND_RESPOND_CREG "\r\n+CREG: 0,1\r\n\r\nOK\r\n"
 #define AT_COMMAND_RESPOND_CGREG "\r\n+CGREG: 0,1\r\n\r\nOK\r\n"
 #define AT_COMMAND_URC_RECV  "\r\n+QIURC: \"recv\",0\r\n"

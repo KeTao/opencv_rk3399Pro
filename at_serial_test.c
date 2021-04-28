@@ -9,6 +9,8 @@
 #include <sys/select.h>
 #include <time.h>
 #include <unistd.h>
+#include "base/delay.h"
+#include <pthread.h>
 
 #ifndef CMSPAR
 #define CMSPAR   010000000000
@@ -368,12 +370,14 @@ int serial_receive(int file_descriptor, char *buffer,size_t data_len)
 int AT_Data_Send_Recv(int fd,char* send_buff,size_t send_len,char* recv_buff,size_t recv_len,int timeout_ms)
 {
 	int ret;
+	printf("----------------------send AT COMMAND ----------------------------------\n");
+	printf("send_buff  = %s\n",send_buff);
 	ret = serial_send(fd,send_buff,send_len);
 	if(ret < 0) {
 		printf("send failed\n");
 		return AT_SEND_ERROR;
 	}
-	printf("send ok\n");
+	//printf("send ok\n");
 
 	if(serial_data_available(fd,timeout_ms)) {//have a data
 		ret= serial_receive(fd,recv_buff,recv_len);
@@ -382,13 +386,17 @@ int AT_Data_Send_Recv(int fd,char* send_buff,size_t send_len,char* recv_buff,siz
 			return AT_RECV_ERROR;
 		}
 	}
-	printf("recv ok!\n");
+	else { //no respond
+		return AT_NO_RESPOND;
+	}
+	//printf("recv ok!  ");
+	printf("----------------------receive AT Respond ----------------------------------\n");
 	printf("recv_buff = %s len = %ld\n",recv_buff,strlen(recv_buff));
-
+	printf("--------------------------------------------------------- ----------------------------------\n");
 	return 0;
 }
 
-//查询运营商
+/* get SIM card Operator */
 int AT_get_COPS(int fd)
 {
 	int ret;
@@ -399,11 +407,9 @@ int AT_get_COPS(int fd)
 
 	//send data and receive data
 	strcpy(send_buff,"AT+COPS?\r\n");
-	printf("send_buff  = %s\n",send_buff);
 	ret = AT_Data_Send_Recv(fd,send_buff,strlen(send_buff),recv_buff,sizeof(recv_buff),timeout_ms);
 	if(ret < 0) {
-		serial_close(fd);
-		exit(EXIT_FAILURE);
+		return ret;
 	}
 
 	//analysis the recv buffer;get Operator info
@@ -414,7 +420,7 @@ int AT_get_COPS(int fd)
 		printf("AT+COPS? command error\n");
 		ptr = NULL;
 		free(ptr);
-		return -1;
+		return AT_LENGTH_ERROR;
 	}
 	else
 		ptr += len;
@@ -435,15 +441,14 @@ int AT_set_QICSGP(int fd,int contextID)
 {
 	int ret;
 	char send_buff[50] = {0};
-	int timeout_ms = 20000;//20s
+	int timeout_ms = 150000;//150s
 	char recv_buff[50] = {0};
 
 	//send data and receive data
 	sprintf(send_buff,"AT+QICSGP=%d\r\n",contextID);
-	printf("send_buff  = %s\n",send_buff);
 	ret = AT_Data_Send_Recv(fd,send_buff,strlen(send_buff),recv_buff,sizeof(recv_buff),timeout_ms);
 	if(ret < 0) {
-		return AT_SET_COMMAND_FAILED;
+		return ret;
 	}
 
 	//analysis the recv buffer;get context_type and APN
@@ -455,7 +460,7 @@ int AT_set_QICSGP(int fd,int contextID)
 		printf("QICSGP command error\n");
 		ptr = NULL;
 		free(ptr);
-		return AT_SET_COMMAND_FAILED;
+		return AT_LENGTH_ERROR;
 	}
 	else
 		ptr += strlen("\r\n+QICSGP: ");
@@ -492,7 +497,6 @@ int AT_set_QICSGP(int fd,int contextID)
 	memset(send_buff,0,sizeof(send_buff));
 	memset(recv_buff,0,sizeof(recv_buff));
 	sprintf(send_buff,"AT+QICSGP=%d,%d,\"%s\"\r\n",contextID,csgp_info.context_type,csgp_info.APN);
-	printf("send_buff  = %s\n",send_buff);
 	ret = AT_set_command(fd,send_buff,strlen(send_buff),recv_buff,sizeof(recv_buff),timeout_ms,AT_COMMAND_RESPOND_OK);
 	if(ret < 0) {
 		return AT_SET_COMMAND_FAILED;
@@ -502,6 +506,8 @@ int AT_set_QICSGP(int fd,int contextID)
 	return AT_SET_COMMAND_SUCCESS;
 }
 
+
+/* init the EC20 4G module Serial device;and set baut rate,data bits,parity, stop bits,flow control */
 int serial_init(const char* device_name,int baut_rate,short data_bits,char parity,short stop_bits,short flow_control)
 {
 	int ret;
@@ -511,7 +517,7 @@ int serial_init(const char* device_name,int baut_rate,short data_bits,char parit
 		perror("open ttyUSB2");
 		return SERIAL_ERROR_OPEN;
 	}
-	printf("open serial %s for EC20 4G module ok\n",device_name);
+	//printf("open serial %s for EC20 4G module ok\n",device_name);
 
 	fd_ec20 = fd;
 	//2.set serial proprities
@@ -526,7 +532,8 @@ int serial_init(const char* device_name,int baut_rate,short data_bits,char parit
 		printf("set data bits/stop bit/flow control/parity failed\n");
 		return SERIAL_ERROR_SETTING;
 	}
-	printf("set serial attr ok\n");
+
+	//printf("set serial attr ok\n");
 	serial_flush(fd_ec20);
 	return 0;
 }
@@ -552,20 +559,21 @@ int AT_set_command(int fd,char* cmd,size_t cmd_len,char* res,size_t res_len,int 
 
 	if(!strcmp(res,res_expect)) {
 		printf("compare ok for cmd %s\n",cmd);
+		printf("----------------------------------------------------------------------------\n");
 		return AT_SET_COMMAND_SUCCESS;
 	}
 	else {
 		printf("compare nok for cmd %s\n",cmd);
+		printf("----------------------------------------------------------------------------\n");
 		return AT_SET_COMMAND_FAILED;
 	}
-
 }
 
 int AT_set_CREG_CGREG(int fd)
 {
 	//define local variable
 	int ret;
-	int timeout_ms = 20000;//20s
+	int timeout_ms = 60000;//60s
 	char recv_buff[100] = {0};
 
 	//set AT command "AT+CREG=0"
@@ -618,86 +626,165 @@ int AT_set_ACT(int fd,int contextID)
 		return AT_SET_COMMAND_FAILED;
 
 	return AT_SET_COMMAND_SUCCESS;
-
 }
 
+int AT_check_SIM(int fd)
+{
+	int ret;
+	int timeout_ms = 40000;//40s
+	char recv_buff[50] = {0};
+	ret = AT_set_command(fd_ec20,"AT+CPIN?\r\n",strlen("AT+CPIN?\r\n"),recv_buff,sizeof(recv_buff),timeout_ms,AT_COMMAND_RESPOND_SIM);
+	//send data and receive data
+	if(ret < 0) {
+		return AT_NO_SIM;
+	}
 
-int main()
+	return 0;
+}
+
+void AT_reboot()
+{
+	char recv_buff[50] = {0};
+	AT_Data_Send_Recv(fd_ec20,"AT+CFUN=1,1\r\n",strlen("AT+CFUN=1,1\r\n"),recv_buff,sizeof(recv_buff),1000);
+	serial_close(fd_ec20);
+}
+
+static int connect_status;
+void* AT_connect_Server(void* arg)
 {
 	//define local variable
 	int ret;
 	char send_buff[1000] = {0};
 	int timeout_ms = 20000;//20s
 	char recv_buff[1000] = {0};
+	int count =0;
 
-	//1.init the ttyUSB2 serial for EC20 4G Module
-	const char device_name[20] = "/dev/ttyUSB2";
-	ret = serial_init(device_name,BAUD_RATE_115200,DATA_BITS_8,PARITY_NONE,STOP_BIT_1,FLOW_CONTROL_NONE);
+
+	//2.set AT to EC20 serial 5 times  20s/time if no respond "OK" then close fd_ec20
+	do {
+		ret = AT_set_command(fd_ec20,"AT\r\n",strlen("AT\r\n"),recv_buff,sizeof(recv_buff),20000,AT_COMMAND_RESPOND_OK);
+		count ++;
+	}while((ret < 0) && (count < 5));
+
 	if(ret < 0) {
+		printf("the EC20 is error,Please check or change it\n");
 		serial_close(fd_ec20);
+		connect_status = AT_COMMAND_ERROR_NO_MODULE;
 		exit(EXIT_FAILURE);
 	}
-
-	//2.set ATE0 to EC20 serial
-	ret = AT_set_command(fd_ec20,"ATE0\r\n",strlen("ATE0\r\n"),recv_buff,sizeof(recv_buff),timeout_ms,AT_COMMAND_RESPOND_OK);
-	if(ret < 0) {
-		serial_close(fd_ec20);
-		exit(EXIT_FAILURE);
+	else {
+		printf("AT OK\n");
 	}
 
-	//3.set AT to EC20 serial
-	memset(recv_buff,0,sizeof(recv_buff));
-	ret = AT_set_command(fd_ec20,"AT\r\n",strlen("AT\r\n"),recv_buff,sizeof(recv_buff),timeout_ms,AT_COMMAND_RESPOND_OK);
+	//3.set ATE0 to EC20 serial 3 times 20s/time
+	do {
+		ret = AT_set_command(fd_ec20,"ATE0\r\n",strlen("ATE0\r\n"),recv_buff,sizeof(recv_buff),20000,AT_COMMAND_RESPOND_OK);
+		count ++;
+	}while((ret < 0) && (count < 3));
+
 	if(ret < 0) {
+		printf("the EC20 is error,Please check or change it\n");
 		serial_close(fd_ec20);
+		connect_status =  AT_COMMAND_ERROR_NO_MODULE;
 		exit(EXIT_FAILURE);
 	}
+	else {
+		printf("ATE0 OK\n");
+	}
 
-	//4. get Operator info
+	//4.check if having SIM card
+	ret = AT_check_SIM(fd_ec20);	
+	if(ret == AT_NO_SIM) {
+		printf("Please check if having SIM card\n");
+		serial_close(fd_ec20);
+		connect_status =  AT_NO_SIM;
+		exit(EXIT_FAILURE);
+	}
+	else {
+		printf("SIM Checked OK\n");
+	}		
+
+	//5. get Operator info
 	ret = AT_get_COPS(fd_ec20);
-
-
+	if(ret < 0) {
+		printf("get Operator failed\n");
+	}
+	else {
+		printf("get Operator success\n");
+	}
 	printf("---------------------------------------------------------------------------------------\n");
 
+	//6.check network
 	ret= AT_set_CREG_CGREG(fd_ec20);
 	if(ret < 0) {
 		printf("set CREG and CGREG failed\n ");
+		AT_reboot();
+		connect_status =  AT_NO_NETWORK;
+		exit(EXIT_FAILURE);
+	}
+	else {
+		printf("set CREG and CGREG OK\n ");
 	}
 
-	ret = AT_set_QICSGP(fd_ec20,1);
+	//6.configure context
+	count =0;
+	do {
+		ret = AT_set_QICSGP(fd_ec20,1);
+		count ++;
+	}while((ret < 0) && (count <= 3));
 	if(ret  < 0)
 	{
-		printf("set QICSGP failed\n");
+		printf("set QICSGP failed,no local network\n");
+		AT_reboot();
+		connect_status =  AT_SET_CONTEXT_ERROR;
+		exit(EXIT_FAILURE);
 	}
 
-	ret = AT_set_ACT(fd_ec20,1);
+	//7.active ACT
+	count =0;
+	do {
+		ret = AT_set_ACT(fd_ec20,1);
+		count++;
+	}while((ret < 0) && (count <= 3));
 	if(ret < 0) {
 		printf("set ACT failed\n");
+		AT_reboot();
+		connect_status =  AT_ACTIVE_CONTEXT_ERROR;
+		exit(EXIT_FAILURE);
 	}
 
-	printf("---------------------------------------------------------------------------------------\n");
-		int connectID = 0;//socket
-		int access_mode = 0;
-		char service_type[20] = {0};
-		strcpy(service_type,"TCP");
+
+	/* in this project the service type is "TCP" for create a tcp client */
+	if(!strcmp(service_type,SERVICE_TYPE_TCP)) {
 		memset(recv_buff,0,sizeof(recv_buff));
 		sprintf(send_buff,"AT+QIOPEN=%d,%d,\"%s\",\"%s\",%d,0,%d\r\n",csgp_info.context_id,connectID,service_type,SERVER_IP,SERVER_PORT,access_mode);
-		printf("send_buff = %s\n",send_buff);
 		AT_Data_Send_Recv(fd_ec20,send_buff,strlen(send_buff),recv_buff,sizeof(recv_buff),timeout_ms);
-		char recv_buff1[100] = {0};
-		if(serial_data_available(fd_ec20,timeout_ms)) {//have a data
-			ret= serial_receive(fd_ec20,recv_buff1,sizeof(recv_buff1));
-			if(ret < 0) {
-				printf("recv failed\n");
+		
+		if(strlen(recv_buff) == strlen(AT_COMMAND_RESPOND_OK)) {
+			memset(recv_buff,0,sizeof(recv_buff));
+			if(serial_data_available(fd_ec20,timeout_ms)) {//have a data
+				ret= serial_receive(fd_ec20,recv_buff,sizeof(recv_buff));
+				if(ret < 0) {
+					printf("recv failed\n");
+				}
+				printf("recv again recv_buff = %s len = %ld\n",recv_buff,strlen(recv_buff));
 			}
 		}
-		printf("recv agin ok!\n");
-		printf("recv_buff1 = %s len = %ld\n",recv_buff1,strlen(recv_buff1));
+	}
+	sleep(4);	
+	printf("+++++++++++send data++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+	connect_status = 0;
+	return (void*)&connect_status;
+}
 
-		sleep(4);	
-		printf("+++++++++++send data++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-		
-	while(1) {
+int AT_send_DATA(int fd,int connectID,char* data_hex,size_t data_len)
+{
+	int ret;
+	char send_buff[1000] = {0};
+int timeout_ms = 20000;//20s
+char recv_buff[1000] = {0};
+
+while(1) {
 		memset(send_buff,0,sizeof(send_buff));
 		memset(recv_buff,0,sizeof(recv_buff));
 		char hex_a[100] = "303132333435";
@@ -705,28 +792,50 @@ int main()
 		printf("send_buff = %s\n",send_buff);
 		AT_Data_Send_Recv(fd_ec20,send_buff,strlen(send_buff),recv_buff,sizeof(recv_buff),timeout_ms);
 		sleep(4);	
-		
-		memset(recv_buff,0,sizeof(recv_buff));
+
 		printf("++++recieve data+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
-		if(serial_data_available(fd_ec20,timeout_ms)) {//have a data
-			ret= serial_receive(fd_ec20,recv_buff,sizeof(recv_buff));
-			if(ret < 0) {
-				 printf("recv failed\n");
-			}
+		memset(send_buff,0,sizeof(send_buff));
+		memset(recv_buff,0,sizeof(recv_buff));
+		sprintf(send_buff,"AT+QIRD=%d,1500\r\n",connectID);
+		printf("send_buff = %s\n",send_buff);
+		AT_Data_Send_Recv(fd_ec20,send_buff,strlen(send_buff),recv_buff,sizeof(recv_buff),timeout_ms);
+		if(!memcmp(recv_buff,"\r\n+QIRD: ",strlen("\r\n+QIRD: "))){
+			printf("it is same \n");
 		}
-		printf("recv ok!\n");
-		printf("recv_buff = %s len = %ld\n",recv_buff,strlen(recv_buff));
+
 		if(!strcmp(recv_buff,AT_COMMAND_URC_RECV)) {
-			printf("server send data\n");
+			printf("it is same1\n");
+
 		}
 
 
 		sleep(4);
 		printf("---------------------------------------------------------------------------------------\n");
 	}
-		memset(send_buff,0,sizeof(send_buff));
-		memset(recv_buff,0,sizeof(recv_buff));
-		AT_set_command(fd_ec20,"AT+QICLOSE=0\r\n",strlen("AT+QICLOSE=0\r\n"),recv_buff,sizeof(recv_buff),timeout_ms,AT_COMMAND_RESPOND_OK);
-	serial_close(fd_ec20);
+}
+
+int AT_close_socket(int fd)
+{
+	int ret;
+	char recv_buff[100] = {0};
+	int timeout_ms = 40000;
+	ret = AT_set_command(fd_ec20,"AT+QICLOSE=0\r\n",strlen("AT+QICLOSE=0\r\n"),recv_buff,sizeof(recv_buff),timeout_ms,AT_COMMAND_RESPOND_OK);
+	if(ret < 0) {
+		printf("socket close error\n");
+		AT_reboot();
+		return AT_QICLOSE_ERROR;
+		exit(EXIT_FAILURE);
+	}
 	return 0;
 }
+
+int main()
+{
+	/* start a thread to start serial connect to Server */
+	pthread_t tid;
+	at_qiopen_t qiopen_info;
+	int ret = pthread_create(&tid,NULL,AT_connect_Server,(void*)&qiopen_info);
+	
+}
+
+
