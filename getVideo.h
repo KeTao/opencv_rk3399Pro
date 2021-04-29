@@ -3,6 +3,7 @@
 
 #define MAXVIDEONUM 20
 #define PATHLEN     300
+<<<<<<< HEAD
 
 typedef struct camera_device_info{
     char device_name[20];
@@ -12,5 +13,10 @@ typedef struct camera_list{
 	camera_device_info_t camera_device_info[MAXVIDEONUM];
 	unsigned int camera_num;
 }camera_list_t;
+=======
+int fds_video[MAXVIDEONUM] = {0};
+
+
+>>>>>>> 6a8396cae019b88c2eb1162583e05dfac5ab3e40
 
 #endif

@@ -5,15 +5,21 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+<<<<<<< HEAD
 #include <unistd.h>
 #include <linux/videodev2.h>
 #include <linux/v4l2-controls.h>
 #include <sys/ioctl.h>
 #include "getVideo.h"
+=======
+ #include <unistd.h>
+
+>>>>>>> 6a8396cae019b88c2eb1162583e05dfac5ab3e40
 //get all video device from /dev
 
 #define MAXVIDEONUM 20
 #define PATHLEN     300
+<<<<<<< HEAD
 
 camera_list_t cameraList;
 
@@ -24,6 +30,16 @@ int main()
 	char videoname[MAXVIDEONUM][PATHLEN];
 	memset(videoname,0,sizeof(videoname));
 	cameraList.camera_num = 0;
+=======
+int fds_video[MAXVIDEONUM] = {0};
+int main()
+{
+	char devicename[PATHLEN] = {0};
+	char videoname[MAXVIDEONUM][PATHLEN];
+	memset(videoname,0,sizeof(videoname));
+
+	
+>>>>>>> 6a8396cae019b88c2eb1162583e05dfac5ab3e40
 	/* open /dev dir;then read the file in this dir */
 	DIR* dir = opendir("/dev");
 	struct dirent *ptr;
@@ -49,6 +65,7 @@ int main()
 		}
 	}
 	
+<<<<<<< HEAD
 	struct v4l2_format fmt;
 	 //set default video capture parameters設置默認的攝像頭捕獲參數
 	fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -56,6 +73,8 @@ int main()
 	fmt.fmt.pix.height = 720;
 	fmt.fmt.pix.width  = 1280;
 	fmt.fmt.pix.field = V4L2_FIELD_INTERLACED;
+=======
+>>>>>>> 6a8396cae019b88c2eb1162583e05dfac5ab3e40
 
 	for(int i = 0;i< count;i++)
 	{
@@ -67,6 +86,7 @@ int main()
 		}
 		else {
 			printf("open %s success\n",videoname[i]);
+<<<<<<< HEAD
 			if(ioctl(fd,VIDIOC_S_FMT,&fmt) != -1) {
 				fds_video[i] = fd;	
 				strcpy(cameraList.camera_device_info[cameraList.camera_num].device_name,videoname[i]);
@@ -81,5 +101,12 @@ int main()
 		printf("in this client,device [%d] is [%s]\n",i,cameraList.camera_device_info[i].device_name);
 	}
 
+=======
+			fds_video[i] = fd;	
+			close(fd);
+		}
+	}
+						
+>>>>>>> 6a8396cae019b88c2eb1162583e05dfac5ab3e40
 	return 0;
 }

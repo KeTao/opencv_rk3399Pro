@@ -16,18 +16,33 @@ const int framesize = IMAGEWIDTH * IMAGEHEIGHT * 2;   //一副图所含的像素
 int main()
 {
 	int ret= v4l2_init_camera();
+<<<<<<< HEAD
 	if(ret < 0) {
 		printf("init vdl2 failed\n");
 		return ret;
+=======
+	if(ret == FALSE) {
+		printf("init vdl2 failed\n");
+		return 0;
+>>>>>>> 6a8396cae019b88c2eb1162583e05dfac5ab3e40
 	}
 
 
 	ret = v4l2_camera_reqbuff();
+<<<<<<< HEAD
 	if(ret < 0) {
 		printf("request buffer error\n");
 		return ret;
 	}
 
+=======
+	if(ret == FALSE) {
+		printf("request buffer error\n");
+		return 0;
+	}
+
+
+>>>>>>> 6a8396cae019b88c2eb1162583e05dfac5ab3e40
 	while(1) {
 		unsigned char* pYuvBuf = new unsigned char[framesize]; //一帧数据大小	
 		FILE* file_yuv = fopen(YUY2IMG,"wb");
@@ -40,9 +55,15 @@ int main()
 		}
 
 		int ret = v4l2_start_camera(file_yuv);
+<<<<<<< HEAD
 		if(ret < 0) {
 			printf("cap image failed\n");
 			return ret;
+=======
+		if(ret == FALSE) {
+			printf("cap image failed\n");
+			return 0;
+>>>>>>> 6a8396cae019b88c2eb1162583e05dfac5ab3e40
 		}
 		fclose(file_yuv);
 		

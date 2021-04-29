@@ -2,6 +2,7 @@
 #define __V4L2_CAMERA_H
 
 #include <linux/videodev2.h>
+<<<<<<< HEAD
 #include <linux/v4l2-controls.h>
 
 #include <stdio.h>
@@ -76,13 +77,30 @@ typedef struct camera_device_info{
 #define IMAGEHEIGHT  720
 #define FPS          30
 #define EXPOSURE_DEFULT 300
+=======
+#include <stdio.h>
+#define TURE  0
+#define FALSE -1
+
+#define FILE_VIDEO "/dev/video0"
+#define YUY2IMG  "/home/firefly/work_3399/chenlvqing/opencv_rk3399Pro/image/img_yuv.yuv" //保存yuv格式的數據
+
+//截取圖片的分辨率 
+#define IMAGEWIDTH   1280
+#define IMAGEHEIGHT  720
+
+>>>>>>> 6a8396cae019b88c2eb1162583e05dfac5ab3e40
 typedef struct VideoBuffer {
     void* start;//mmap start addr
     size_t length;
 }VideoBuffer;
 
 int v4l2_init_camera(void);
+<<<<<<< HEAD
 int v4l2_camera_reqbuff(int cam_fd,int camera_flag);
+=======
+int v4l2_camera_reqbuff(void);
+>>>>>>> 6a8396cae019b88c2eb1162583e05dfac5ab3e40
 int v4l2_start_camera(FILE* file);
 int v4l2_stop_camera(void);
 
