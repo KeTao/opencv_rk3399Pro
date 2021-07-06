@@ -34,8 +34,8 @@
 #define PATHLEN     300
 
 //define defult resolution width * height 
-#define IMAGEWIDTH   1280
-#define IMAGEHEIGHT  720
+#define IMAGEWIDTH   2000
+#define IMAGEHEIGHT  1300
 #define FPS          30
 #define EXPOSURE_DEFULT 300
 

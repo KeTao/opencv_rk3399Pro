@@ -12,7 +12,7 @@
 #include <dirent.h>
 
 int cam_FdList[MAXVIDEONUM] = {0};//all camera device fd
-static int number_frame = 0;//all the video frame 
+int number_frame[MAXVIDEONUM] = {0};//all the video frame 
 struct VideoBuffer* buffers[MAXVIDEONUM]; //user space frame buffer for 
 camera_list_t cameraList;
 
@@ -189,7 +189,7 @@ int v4l2_set_fmtd(int cam_fd,int width,int height)
 	struct v4l2_format fmt;
 	//set default video capture parameters設置默認的攝像頭捕獲參數
 	fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
+	fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;
 	fmt.fmt.pix.height = height;
 	fmt.fmt.pix.width = width;
 	fmt.fmt.pix.field = V4L2_FIELD_INTERLACED;
@@ -207,6 +207,7 @@ int v4l2_set_fmtd(int cam_fd,int width,int height)
 	}
 	
 	printf("set v4l2_format ok\n");
+	printf("frame h:%d frame w:%d\n",fmt.fmt.pix.height,fmt.fmt.pix.width);
 	return 0;
 }
 
@@ -257,6 +258,7 @@ int v4l2_init_camera(void)
 			printf("open %s failed;err info = %s\n",cameraList.camera_device_info[i].device_name,strerror(errno));
 			return CAMERA_OPEN_ERROR;
 		}	
+		printf("open %s success and device file descriptor is %d\n",cameraList.camera_device_info[i].device_name,cam_FdList[i]);
 
 		//2.get the video info
 
@@ -383,31 +385,31 @@ int v4l2_start_camera(FILE* file,int cam_fd,int camera_index)
 		return VIDIOC_STREAMON_ERROR;
 		return VIDIOC_STREAMON_ERROR;
 	}
-	printf("cap vidieo stream success!\n");
+//	printf("cap vidieo stream success!\n");
   
 	struct v4l2_buffer v4lbuf;
     memset(&v4lbuf,0, sizeof(v4lbuf));
     v4lbuf.type  = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     v4lbuf.memory= V4L2_MEMORY_MMAP;
-	v4lbuf.index = number_frame % COUNT;
-	printf("index = %d\n",v4lbuf.index);
+	v4lbuf.index = number_frame[camera_index] % COUNT;
+//	printf("index = %d\n",v4lbuf.index);
 	//get out frame buffer data from queue
 	if(ioctl(cam_fd,VIDIOC_DQBUF,&v4lbuf) == -1) {
 		printf("VIDIOC_DQBUF get out frame buffer data from queue failed\n");
 
 		return VIDIOC_DQBUF_ERROR;
 	};
-	printf("GRAB YUYV ok\n");
+//	printf("GRAB YUYV ok\n");
 	//save yuyv image file
-	fwrite(buffers[camera_index][v4lbuf.index].start,buffers[camera_index][v4lbuf.index].length,1,file);
-	printf("save yuyv ok\n");
+	fwrite(buffers[camera_index][v4lbuf.index].start,1,buffers[camera_index][v4lbuf.index].length,file);
+//	printf("save yuyv ok\n");
 
 	if (ioctl(cam_fd, VIDIOC_QBUF, &v4lbuf) == -1) {
 		printf("VIDIOC_QBUF error\n");
 		return VIDIOC_QBUF_ERROR;
 	}
-  	number_frame ++;
-  	printf("number_frame = %d\n",number_frame);
+  	number_frame[camera_index] ++;
+  	printf("number_frame[%d] = %d\n",camera_index,number_frame[camera_index]);
   	return 0;
 }
 

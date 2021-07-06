@@ -650,7 +650,7 @@ void AT_reboot()
 }
 
 static int connect_status;
-void* AT_connect_Server(void* arg)
+int  AT_connect_Server()
 {
 	//define local variable
 	int ret;
@@ -771,7 +771,7 @@ void* AT_connect_Server(void* arg)
 			}
 		}
 	}
-	sleep(4);	
+	sleep(4);	:w
 	printf("+++++++++++send data++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
 	connect_status = 0;
 	return (void*)&connect_status;
@@ -831,10 +831,10 @@ int AT_close_socket(int fd)
 
 int main()
 {
-	/* start a thread to start serial connect to Server */
-	pthread_t tid;
-	at_qiopen_t qiopen_info;
-	int ret = pthread_create(&tid,NULL,AT_connect_Server,(void*)&qiopen_info);
+
+	
+
+
 	
 }
 
